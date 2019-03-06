@@ -1,17 +1,17 @@
 package com.weirui.orika;
 
 import java.util.Map;
-import java.util.Set;
 
 /**
- * orika bean 配置属性
+ * MapperFactory 配置属性
  *
  * @author 隗锐
  * @dateTime 2019-01-09 18:31:46
  */
-public class OrikaBeanConfigAttribute {
+public class MapperFactoryConfigAttribute {
 
 
+    private Class<?> source;
     private Map<String ,MapperField> mapperFields;
 
     private Mapper mapper;
@@ -26,6 +26,14 @@ public class OrikaBeanConfigAttribute {
 
     public Mapper getMapper() {
         return mapper;
+    }
+
+    public Class<?> getSource() {
+        return source;
+    }
+
+    public void setSource(Class<?> source) {
+        this.source = source;
     }
 
     public void setMapper(Mapper mapper) {

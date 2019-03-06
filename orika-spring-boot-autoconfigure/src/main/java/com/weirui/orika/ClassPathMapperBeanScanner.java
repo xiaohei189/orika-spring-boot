@@ -3,11 +3,7 @@ package com.weirui.orika;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.BeanDefinitionStoreException;
-import org.springframework.beans.factory.config.BeanDefinition;
-import org.springframework.context.annotation.ScannedGenericBeanDefinition;
-import org.springframework.core.annotation.AnnotatedElementUtils;
 import org.springframework.core.annotation.AnnotationUtils;
-import org.springframework.core.io.DefaultResourceLoader;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 import org.springframework.core.io.support.ResourcePatternResolver;
@@ -17,54 +13,43 @@ import org.springframework.core.type.classreading.CachingMetadataReaderFactory;
 import org.springframework.core.type.classreading.MetadataReader;
 import org.springframework.core.type.classreading.MetadataReaderFactory;
 import org.springframework.util.ClassUtils;
-import org.springframework.util.ReflectionUtils;
 
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.util.*;
 
 /**
- * 扫描orika bean映射文件
- *
+ *扫描路径下所有{@link com.weirui.orika.Mapper}
  * @author 隗锐
  * @dateTime 2019-01-06 16:18:52
  */
 public class ClassPathMapperBeanScanner {
     static final String DEFAULT_RESOURCE_PATTERN = "**/*.class";
-
-
     private final Logger logger = LoggerFactory.getLogger(ClassPathMapperBeanScanner.class);
-
-
     private String resourcePattern = DEFAULT_RESOURCE_PATTERN;
-    private List<String> pacageName;
     private PathMatchingResourcePatternResolver resourcePatternResolver;
     private CachingMetadataReaderFactory metadataReaderFactory;
 
-    private final String mapperClassName = Mapper.class.getName();
+    private static final String mapperClassName = Mapper.class.getName();
 
 
     /**
-     * 扫描路径下所有orika Mapper bean
-     *
      * @param packageNames
      * @return
      */
-    public Set<OrikaBeanConfigAttribute> scan(String... packageNames) {
-
-        Set<OrikaBeanConfigAttribute> configAttributes = new HashSet<>();
-
+    public Set<MapperFactoryConfigAttribute> scan(String... packageNames) {
+        Set<MapperFactoryConfigAttribute> configAttributes = new HashSet<>();
         for (String packageName : packageNames) {
 
-            Set<OrikaBeanConfigAttribute> attributes = scanCandidateComponents(packageName);
+            Set<MapperFactoryConfigAttribute> attributes = scanCandidateComponents(packageName);
             configAttributes.addAll(attributes);
         }
 
         return configAttributes;
     }
 
-    private Set<OrikaBeanConfigAttribute> scanCandidateComponents(String basePackage) {
-        Set<OrikaBeanConfigAttribute> configAttributes = new LinkedHashSet<>();
+    private Set<MapperFactoryConfigAttribute> scanCandidateComponents(String basePackage) {
+        Set<MapperFactoryConfigAttribute> configAttributes = new LinkedHashSet<>();
         try {
             String packageSearchPath = ResourcePatternResolver.CLASSPATH_ALL_URL_PREFIX +
                     ClassUtils.convertClassNameToResourcePath(basePackage) + '/' + this.resourcePattern;
@@ -80,7 +65,7 @@ public class ClassPathMapperBeanScanner {
                         MetadataReader metadataReader = getMetadataReaderFactory().getMetadataReader(resource);
 
                         if (isOrikaMapper(metadataReader)) {
-                            OrikaBeanConfigAttribute sbd = buildOrikaConfigAttribute(metadataReader);
+                            MapperFactoryConfigAttribute sbd = buildOrikaConfigAttribute(metadataReader);
                             if (true) {
                                 if (debugEnabled) {
                                     logger.debug("Identified candidate component class: " + resource);
@@ -112,18 +97,29 @@ public class ClassPathMapperBeanScanner {
         return configAttributes;
     }
 
-    private OrikaBeanConfigAttribute buildOrikaConfigAttribute(MetadataReader metadataReader) {
-        OrikaBeanConfigAttribute orikaBeanConfigAttribute = new OrikaBeanConfigAttribute();
+    private MapperFactoryConfigAttribute buildOrikaConfigAttribute(MetadataReader metadataReader) {
+        MapperFactoryConfigAttribute orikaBeanConfigAttribute = new MapperFactoryConfigAttribute();
         ClassMetadata classMetadata = metadataReader.getClassMetadata();
         try {
             Class<?> mapperClass = Class.forName(classMetadata.getClassName());
 
+            orikaBeanConfigAttribute.setSource(mapperClass);
             Mapper mapper = AnnotationUtils.getAnnotation(mapperClass, Mapper.class);
             orikaBeanConfigAttribute.setMapper(mapper);
 
-            Map<String, MapperField> fields = new HashMap<>();
-            recursionDetectAllFields(mapperClass, fields);
-            orikaBeanConfigAttribute.setMapperFields(fields);
+            Map<String, MapperField> fieldMaps = new HashMap<>();
+
+            Field[] fields = mapperClass.getDeclaredFields();
+            for (Field field : fields) {
+                MapperField mapperField = AnnotationUtils.getAnnotation(field, MapperField.class);
+                if (mapperField!=null) {
+                    fieldMaps.put(field.getName(), mapperField);
+                }
+
+            }
+
+            orikaBeanConfigAttribute.setMapperFields(fieldMaps);
+
         } catch (ClassNotFoundException e) {
             e.printStackTrace();
         }
@@ -155,45 +151,5 @@ public class ClassPathMapperBeanScanner {
         return this.metadataReaderFactory;
     }
 
-    /**
-     * 递归查找该类所MapperField标注的字段,子类字段上注解属性会覆盖父类
-     *
-     * @param mapperClass
-     * @param mapperFields
-     */
 
-    private void recursionDetectAllFields(Class<?> mapperClass, Map<String, MapperField> mapperFields) {
-        String canonicalName = mapperClass.getCanonicalName();
-        if ("java.lang.Object".equals(canonicalName)) {
-            return;
-        } else {
-            Class<?> superclass = mapperClass.getSuperclass();
-            recursionDetectAllFields(superclass, mapperFields);
-        }
-
-        Field[] fields = mapperClass.getDeclaredFields();
-
-        for (Field field : fields) {
-            String name = field.getName();
-            MapperField parrentField = mapperFields.get(name);
-            if (parrentField == null) {
-                mapperFields.put(name, parrentField);
-            } else {
-                MapperField childField = AnnotationUtils.getAnnotation(field, MapperField.class);
-                if (childField != null) {
-                    Map<String, Object> parrentAttributes = AnnotationUtils.getAnnotationAttributes(parrentField);
-                    Map<String, Object> childAttributes = AnnotationUtils.getAnnotationAttributes(childField);
-                    parrentAttributes.putAll(childAttributes);
-
-                    MapperField synthesizeMapperField = AnnotationUtils.synthesizeAnnotation(parrentAttributes, MapperField.class, null);
-                    mapperFields.put(name, synthesizeMapperField);
-
-                } else {
-                    mapperFields.remove(name);
-                }
-
-            }
-        }
-
-    }
 }

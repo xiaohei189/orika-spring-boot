@@ -1,12 +1,12 @@
 package com.weirui.orika;
 
 @Mapper(destination = Dest.class)
-public class Source {
+public class Source2 {
     @MapperField(fieldName = "name")
     private String name;
     private int age;
 
-    public Source(String name, int age) {
+    public Source2(String name, int age) {
         this.name = name;
         this.age = age;
     }
