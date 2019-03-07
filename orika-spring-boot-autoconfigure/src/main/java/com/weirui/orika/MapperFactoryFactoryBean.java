@@ -28,8 +28,14 @@ public class MapperFactoryFactoryBean implements SmartFactoryBean<MapperFactory>
 
     private final Logger logger=LoggerFactory.getLogger(MapperFactoryFactoryBean.class);
 
+
+    private final String[] packages;
+
     private ApplicationContext applicationContext;
 
+    public MapperFactoryFactoryBean(String[] packages) {
+        this.packages=packages;
+    }
 
     @Override
     public MapperFactory getObject() throws Exception {
@@ -40,7 +46,7 @@ public class MapperFactoryFactoryBean implements SmartFactoryBean<MapperFactory>
 
         ClassPathMapperBeanScanner classPathMapperBeanScanner = new ClassPathMapperBeanScanner();
 
-        Set<MapperFactoryConfigAttribute> beanConfigAttributes = classPathMapperBeanScanner.scan("com.weirui");
+        Set<MapperFactoryConfigAttribute> beanConfigAttributes = classPathMapperBeanScanner.scan(this.packages);
 
         beanConfigAttributes.forEach(attribute->{
             Map<String, MapperField> mapperFields = attribute.getMapperFields();
@@ -109,4 +115,5 @@ public class MapperFactoryFactoryBean implements SmartFactoryBean<MapperFactory>
 
         this.applicationContext=applicationContext;
     }
+
 }
