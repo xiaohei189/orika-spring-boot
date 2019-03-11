@@ -5,12 +5,13 @@ package com.weirui.orika;
  *
  *
  */
-@Mapper(destination = Source.Dest.class)
-public class Source {
+@Mapper(destination = SourceAlias.Dest.class)
+public class SourceAlias {
+    @MapperField(fieldName = "alia")
     private String name;
     private int age;
 
-    public Source(String name, int age) {
+    public SourceAlias(String name, int age) {
         this.name = name;
         this.age = age;
     }
@@ -35,7 +36,8 @@ public class Source {
         private String name;
         private int age;
         private String alia;
-
+        public Dest() {
+        }
         public Dest(String name, int age) {
             this.name = name;
             this.age = age;

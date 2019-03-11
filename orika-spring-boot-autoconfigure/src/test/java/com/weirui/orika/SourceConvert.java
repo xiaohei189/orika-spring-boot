@@ -1,16 +1,15 @@
 package com.weirui.orika;
-/**
- *
- *   @author 隗锐(weirui) 2019-03-11 18:02:02
- *
- *
- */
-@Mapper(destination = Source.Dest.class)
-public class Source {
-    private String name;
-    private int age;
 
-    public Source(String name, int age) {
+/**
+ * @author 隗锐(weirui) 2019-03-11 17:47:02
+ */
+@Mapper(destination = SourceConvert.Dest.class)
+public class SourceConvert {
+    private String name;
+    @MapperField(fieldName = "age",converterName = "string2Number")
+    private String age;
+
+    public SourceConvert(String name, String age) {
         this.name = name;
         this.age = age;
     }
@@ -23,11 +22,11 @@ public class Source {
         this.name = name;
     }
 
-    public int getAge() {
+    public String getAge() {
         return age;
     }
 
-    public void setAge(int age) {
+    public void setAge(String age) {
         this.age = age;
     }
 
@@ -35,6 +34,9 @@ public class Source {
         private String name;
         private int age;
         private String alia;
+
+        public Dest() {
+        }
 
         public Dest(String name, int age) {
             this.name = name;

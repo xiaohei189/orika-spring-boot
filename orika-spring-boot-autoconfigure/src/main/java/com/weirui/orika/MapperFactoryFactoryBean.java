@@ -92,6 +92,7 @@ public class MapperFactoryFactoryBean implements SmartFactoryBean<MapperFactory>
                     fieldMapBuilder.converter(converterName);
 
                 }
+                fieldMapBuilder.add();
 
 
 
